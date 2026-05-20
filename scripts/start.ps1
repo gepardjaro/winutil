@@ -9,6 +9,7 @@
 param (
     [string]$Config,
     [switch]$Noui,
+    [switch]$Tui,
     [switch]$Offline
 )
 
@@ -19,6 +20,11 @@ if ($Config) {
 $PARAM_NOUI = $false
 if ($Noui) {
     $PARAM_NOUI = $true
+}
+
+$PARAM_TUI = $false
+if ($Tui) {
+    $PARAM_TUI = $true
 }
 
 $PARAM_OFFLINE = $false

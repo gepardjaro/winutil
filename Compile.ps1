@@ -1,5 +1,6 @@
 param (
-    [switch]$Run
+    [switch]$Run,
+    [switch]$Tui
 )
 
 $OFS = "`r`n" # Makes it so we dont need to add -Raw to every Get-Content command
@@ -46,5 +47,9 @@ $script.Add((Get-Content -Path scripts\main.ps1))
 Set-Content -Path winutil.ps1 -Value $script
 
 if ($Run) {
-    .\Winutil.ps1
+    if ($Tui) {
+        .\Winutil.ps1 -Tui
+    } else {
+        .\Winutil.ps1
+    }
 }

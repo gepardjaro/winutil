@@ -1,0 +1,93 @@
+name: TUI Release
+
+# Builds winutil.ps1 with TUI support and publishes it as a GitHub Release on
+# this fork. Users can then run:
+#   irm https://github.com/<owner>/<repo>/releases/latest/download/winutil.ps1 | iex
+# and optionally pass `-Tui` (the bundled script supports both GUI and TUI).
+#
+# Triggers:
+#   - any tag matching tui-v*      (e.g. tui-v26.05.20)
+#   - manual workflow_dispatch     (creates a release tagged with today's date)
+
+on:
+  push:
+    tags:
+      - 'tui-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like 'refs/tags/tui-v*') {
+            $v = $env:GITHUB_REF -replace 'refs/tags/tui-v',''
+          } else {
+            $v = Get-Date -Format 'yy.MM.dd'
+          }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "VERSION=$v"  | Out-File -FilePath $env:GITHUB_ENV    -Append
+
+      - name: Compile
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          ./Compile.ps1
+
+      - name: Install Pester 5
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          Install-Module -Name Pester -Force -SkipPublisherCheck -MinimumVersion 5.0
+
+      - name: Run TUI guards + existing config tests
+        shell: pwsh
+        run: |
+          Import-Module Pester -MinimumVersion 5.0
+          $result = Invoke-Pester -Path 'pester/tui.Tests.ps1','pester/configs.Tests.ps1' -Output Detailed -PassThru
+          if ($result.FailedCount -gt 0) { exit 1 }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: winutil-ps1
+          path: ./winutil.ps1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: winutil-ps1
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('tui-v{0}', needs.build.outputs.version) }}
+          name: WinUtil TUI ${{ needs.build.outputs.version }}
+          body: |
+            WinUtil with Terminal UI support — includes both the original WPF GUI and a new terminal UI.
+
+            **WPF GUI (original):**
+            ```ps1
+            irm https://github.com/${{ github.repository }}/releases/latest/download/winutil.ps1 | iex
+            ```
+
+            **Terminal UI (TUI):**
+            ```ps1
+            & ([scriptblock]::Create((irm https://github.com/${{ github.repository }}/releases/latest/download/winutil.ps1))) -Tui
+            ```
+          files: ./winutil.ps1
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -11,15 +11,24 @@ public enum PackageManagers
 # Set the maximum number of threads for the RunspacePool to the number of threads on the machine
 $maxthreads = [int]$env:NUMBER_OF_PROCESSORS
 
+# In TUI mode there is no WPF form, so Invoke-WPFUIThread (and every taskbar/overlay
+# call it wraps) must short-circuit. The function already guards on $PARAM_NOUI, so
+# we promote TUI mode into that guard for the main thread and every runspace.
+if ($PARAM_TUI) {
+    $PARAM_NOUI = $true
+}
+
 # Create a new session state for parsing variables into our runspace
 $hashVars = New-object System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList 'sync',$sync,$Null
 $uiVar = New-object System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList 'PARAM_NOUI',$PARAM_NOUI,$Null
+$tuiVar = New-object System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList 'PARAM_TUI',$PARAM_TUI,$Null
 $offlineVar = New-object System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList 'PARAM_OFFLINE',$PARAM_OFFLINE,$Null
 $InitialSessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
 
 # Add the variable to the session state
 $InitialSessionState.Variables.Add($hashVars)
 $InitialSessionState.Variables.Add($uiVar)
+$InitialSessionState.Variables.Add($tuiVar)
 $InitialSessionState.Variables.Add($offlineVar)
 
 # Get every private function and add them to the session state
@@ -67,6 +76,16 @@ $sync.configs.applications.PSObject.Properties | ForEach-Object {
 }
 
 Set-Preferences
+
+if ($PARAM_TUI) {
+    Start-WinUtilTui
+
+    $sync.runspace.Dispose()
+    $sync.runspace.Close()
+    [System.GC]::Collect()
+    Stop-Transcript
+    exit 0
+}
 
 if ($PARAM_NOUI) {
     Show-CTTLogo

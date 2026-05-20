@@ -55,3 +55,8 @@ binary/
 docs/public/
 docs/.hugo_build.lock
 docs/resources/
+
+# Personal / local files — not for upstream
+.claude/
+CLAUDE.md
+TUI-MERGE-STRATEGY.md

@@ -9,7 +9,8 @@ function Invoke-WPFInstall {
 
     if($sync.ProcessRunning) {
         $msg = "[Invoke-WPFInstall] An Install process is currently running."
-        [System.Windows.MessageBox]::Show($msg, "Winutil", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+        if ($PARAM_NOUI) { Write-Host $msg -ForegroundColor Yellow }
+        else { [System.Windows.MessageBox]::Show($msg, "Winutil", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning) }
         return
     }
 
