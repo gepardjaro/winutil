@@ -30,6 +30,8 @@ function Set-WinUtilRegistry {
     try {
         if(!(Test-Path 'HKU:\')) {New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS}
 
+        $Path = Get-WinUtilHKCURedirectPath -Path $Path
+
         If (!(Test-Path $Path)) {
             Write-Host "$Path was not found. Creating..."
             New-Item -Path $Path -Force -ErrorAction Stop | Out-Null

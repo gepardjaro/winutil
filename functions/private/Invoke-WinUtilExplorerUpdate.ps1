@@ -32,7 +32,6 @@ public class Win32 {
                 [ref]([IntPtr]::Zero))
         }
     } elseif ($action -eq "restart") {
-        taskkill.exe /F /IM "explorer.exe"
-        Start-Process "explorer.exe"
+        Restart-WinUtilExplorer
     }
 }
